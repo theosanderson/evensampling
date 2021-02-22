@@ -65,5 +65,3 @@ def test_fib():
                                      true_case_numbers=case_numbers,
                                      options=options)
     mysampler.make_picks(box_manifest)
-
-    assert False
