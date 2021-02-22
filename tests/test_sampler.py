@@ -3,7 +3,7 @@
 import pytest
 
 import evensampling
-import StringIO
+from io import StringIO
 import pandas as pd
 
 __author__ = "Your Name"
