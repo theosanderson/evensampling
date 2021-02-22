@@ -20,7 +20,7 @@ class Sampler:
 
         Args:
             previous_aggregated_results (pd.DataFrame): Pandas dataframe of results acquired in previous period with columns: `area`, `n`
-            target_aggregated_results (pd.DataFrame): Pandas dataframe with columns: `area`, `laboratory`, `n`
+            target_aggregated_results (pd.DataFrame): Pandas dataframe with columns: `area`, `n`
             options (dict): parameters.
         """
         self.input = Input()
@@ -151,8 +151,3 @@ class Sampler:
             return {k: self.solver.Value(v) for k,v in variable.items()}
         else:
             return(self.solver.Value(variable))
-    
-
-
-
-
