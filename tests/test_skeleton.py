@@ -2,7 +2,7 @@
 
 import pytest
 
-from samplesampler.skeleton import fib
+from evensampling.skeleton import fib
 
 __author__ = "Your Name"
 __copyright__ = "Your Name"

@@ -5,7 +5,7 @@ console script. To run this script uncomment the following lines in the
 [options.entry_points] section in setup.cfg:
 
     console_scripts =
-         fibonacci = samplesampler.skeleton:run
+         fibonacci = evensampling.skeleton:run
 
 Then run `python setup.py install` which will install the command `fibonacci`
 inside your current environment.
@@ -19,7 +19,7 @@ import argparse
 import logging
 import sys
 
-from samplesampler import __version__
+from evensampling import __version__
 
 __author__ = "Your Name"
 __copyright__ = "Your Name"
@@ -57,7 +57,7 @@ def parse_args(args):
     parser.add_argument(
         "--version",
         action="version",
-        version="samplesampler {ver}".format(ver=__version__),
+        version="evensampling {ver}".format(ver=__version__),
     )
     parser.add_argument(dest="n", help="n-th Fibonacci number", type=int, metavar="INT")
     parser.add_argument(

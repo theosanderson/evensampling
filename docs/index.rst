@@ -1,8 +1,8 @@
 =============
-samplesampler
+evensampling
 =============
 
-This is the documentation of **samplesampler**.
+This is the documentation of **evensampling**.
 
 .. note::
 
