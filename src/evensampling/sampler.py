@@ -2,7 +2,6 @@ from ortools.sat.python import cp_model
 import pandas as pd
 from collections import defaultdict
 
-fjdsjiofdjio()
 
 class Variables(object):
     pass
