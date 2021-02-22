@@ -2,6 +2,8 @@ from ortools.sat.python import cp_model
 import pandas as pd
 from collections import defaultdict
 
+fjdsjiofdjio()
+
 class Variables(object):
     pass
 
@@ -37,7 +39,7 @@ class Sampler:
         self.options.max_samples = options['max_samples']
         self.options.max_boxes = options['max_boxes']
         self.options.max_search_time = options['max_search_time']
-    
+
     def make_picks(self, candidates):
         self.input.candidate_samples = candidates
         self.input.unique_box_names = candidates.box.unique().tolist()
@@ -99,7 +101,7 @@ class Sampler:
         total_in_past_6_days = self.input.previous_aggregated_results['n'].sum()
 
         for area in case_number_proportions.keys():
-            self.v.desired_numbers_for_eod_by_area[area] = int( (7/6) * total_in_past_6_days * case_number_proportions[area]) 
+            self.v.desired_numbers_for_eod_by_area[area] = int( (7/6) * total_in_past_6_days * case_number_proportions[area])
             # This assumes we expect to go at about the same rate as last 6 days - we could also manually specify the number we roughly expect to run today
             # Unfortunately trying to do this on the fly with a division of the number we expect to do doesn't seem to play well with the solver.
 
@@ -127,8 +129,8 @@ class Sampler:
         return sum(area_losses.values())
 
     def get_loss(self):
-        loss = self.get_area_loss() * self.options.area_loss_weighting 
-        loss = loss - self.v.total_samples_picked*self.options.maximise_samples_weighting 
+        loss = self.get_area_loss() * self.options.area_loss_weighting
+        loss = loss - self.v.total_samples_picked*self.options.maximise_samples_weighting
         loss = loss - self.v.total_priority_samples_picked*self.options.priority_sample_weighting
         return loss
 
