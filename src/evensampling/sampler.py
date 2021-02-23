@@ -1,7 +1,10 @@
 from ortools.sat.python import cp_model
 import pandas as pd
 from collections import defaultdict
+import sys
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 class Variables(object):
     pass
@@ -134,14 +137,14 @@ class Sampler:
         return loss
 
     def get_results(self, input_candidates):
-        print("calling get results")
+        eprint("calling get results")
         self.model.Minimize(self.loss)
         self.solver = cp_model.CpSolver()
         self.solver.parameters.max_time_in_seconds = self.options.max_search_time
         #self.solver.parameters.linearization_level = 0
         #self.solver.parameters.num_search_workers=8
         status = self.solver.Solve(self.model)
-        print(f"got loss {self.solver.Value(self.loss)}")
+        eprint(f"got loss {self.solver.Value(self.loss)}")
 
         self.input.candidate_samples
         self.input.candidate_samples['to_pick'] = [self.solver.Value(self.v.sample_is_picked[i]) for i in self.input.candidate_samples.index]
