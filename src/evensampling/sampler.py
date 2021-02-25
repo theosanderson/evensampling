@@ -71,8 +71,8 @@ class Sampler:
             self.model.Add(self.v.box_is_picked[row.box] >= self.v.sample_is_picked[i])
             self.v.sample_is_picked_by_area[row.area].append(self.v.sample_is_picked[i])
 
-        if row.priority:
-            self.v.priority_sample_is_picked[i] = self.v.sample_is_picked[i]
+            if row.priority:
+                self.v.priority_sample_is_picked[i] = self.v.sample_is_picked[i]
 
         self.instantiate_summary_variables()
         self.instantiate_geographical_variables()
