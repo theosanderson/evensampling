@@ -40,11 +40,13 @@ class Sampler:
         self.options.priority_sample_weighting = options['priority_sample_weighting']
         self.options.max_samples = options['max_samples']
         self.options.max_boxes = options['max_boxes']
+        self.options.max_plates = options['max_plates']
         self.options.max_search_time = options['max_search_time']
 
     def make_picks(self, candidates):
         self.input.candidate_samples = candidates
         self.input.unique_box_names = candidates.box.unique().tolist()
+        self.input.unique_plate_names = candidates.plate.unique().tolist()
 
         self.model = cp_model.CpModel()
         self.instantiate_variables()
@@ -60,16 +62,24 @@ class Sampler:
         self.v.sample_is_picked = {} # indexed by row index
         self.v.priority_sample_is_picked = {} # indexed by row index
         self.v.box_is_picked = {} # indexed by box name
+        self.v.plate_is_picked = {} # indexed by box name
 
         self.v.sample_is_picked_by_area = defaultdict(list)
 
         for box_name in self.input.unique_box_names:
             self.v.box_is_picked[box_name] = self.model.NewBoolVar(f'box_{box_name}_is_picked')
 
+        for plate_name in self.input.unique_plate_names:
+            self.v.plate_is_picked[plate_name] = self.model.NewBoolVar(f'plate_{plate_name}_is_picked')
+
         for i,row in self.input.candidate_samples.iterrows():
             self.v.sample_is_picked[i] = self.model.NewBoolVar(f'sample_{i}_is_picked')
             self.model.Add(self.v.box_is_picked[row.box] >= self.v.sample_is_picked[i])
+            self.model.Add(self.v.plate_is_picked[row.plate] >= self.v.sample_is_picked[i])
             self.v.sample_is_picked_by_area[row.area].append(self.v.sample_is_picked[i])
+
+            # Below we assert that if a single sample on a plate is picked then all samples are picked.
+            self.model.Add(  self.v.sample_is_picked[i] >= self.v.plate_is_picked[row.plate])
 
             if row.priority:
                 self.v.priority_sample_is_picked[i] = self.v.sample_is_picked[i]
@@ -80,6 +90,7 @@ class Sampler:
     def instantiate_summary_variables(self):
 
         self.v.total_boxes_picked = sum(self.v.box_is_picked.values())
+        self.v.total_plates_picked = sum(self.v.plate_is_picked.values())
         self.v.total_samples_picked = sum(self.v.sample_is_picked.values())
         self.v.total_priority_samples_picked = sum(self.v.priority_sample_is_picked.values())
         self.v.total_time = self.v.total_boxes_picked* self.options.seconds_per_box_load + self.v.total_samples_picked*self.options.seconds_per_cherrypick
@@ -101,8 +112,10 @@ class Sampler:
         genomes_in_last_6_days_by_area = dict(zip(self.input.previous_aggregated_results['area'], self.input.previous_aggregated_results['n']))
         genomes_in_last_6_days_by_area = defaultdict(lambda: 0,genomes_in_last_6_days_by_area)
         total_in_past_6_days = self.input.previous_aggregated_results['n'].sum()
+        eprint(f"Total in past 6 days: {total_in_past_6_days}")
 
         for area in case_number_proportions.keys():
+            eprint(f"prop {area}:  {case_number_proportions[area]}")
             self.v.desired_numbers_for_eod_by_area[area] = int( (7/6) * total_in_past_6_days * case_number_proportions[area])
             # This assumes we expect to go at about the same rate as last 6 days - we could also manually specify the number we roughly expect to run today
             # Unfortunately trying to do this on the fly with a division of the number we expect to do doesn't seem to play well with the solver.
@@ -111,11 +124,14 @@ class Sampler:
         for area in case_number_proportions.keys():
             if area in self.v.total_by_area:
                 self.v.projected_numbers_for_eod_by_area[area] = genomes_in_last_6_days_by_area[area] + self.v.total_by_area[area]
+            else:
+                self.v.projected_numbers_for_eod_by_area[area] = genomes_in_last_6_days_by_area[area]
 
 
     def add_time_constraint(self):
         self.model.Add(self.v.total_time<self.options.total_time_available)
         self.model.Add(self.v.total_boxes_picked <= self.options.max_boxes)
+        self.model.Add(self.v.total_plates_picked <= self.options.max_plates)
         self.model.Add(self.v.total_samples_picked <= self.options.max_samples)
 
 
@@ -144,6 +160,13 @@ class Sampler:
         #self.solver.parameters.linearization_level = 0
         #self.solver.parameters.num_search_workers=8
         status = self.solver.Solve(self.model)
+        for area in self.v.desired_numbers_for_eod_by_area.keys():
+            desired = self.solver.Value(self.v.desired_numbers_for_eod_by_area[area])
+            projected = self.solver.Value(self.v.projected_numbers_for_eod_by_area[area])
+            eprint(f"{area}: desired: {desired}  projected: {projected} diff:{projected-desired}")
+        eprint(f"Total projected for this 7 days: {self.solver.Value(sum(self.v.projected_numbers_for_eod_by_area.values()))}")
+        eprint(f"Total desired for this 7 days: {self.solver.Value(sum(self.v.desired_numbers_for_eod_by_area.values()))}")
+
         eprint(f"got loss {self.solver.Value(self.loss)}")
 
         self.input.candidate_samples
