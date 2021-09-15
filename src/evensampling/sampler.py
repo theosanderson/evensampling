@@ -3,8 +3,11 @@ import pandas as pd
 from collections import defaultdict
 import sys
 
+log = ""
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+    global log
+    log = log +"\n" + " ".join(args)
 
 class Variables(object):
     pass
@@ -37,7 +40,6 @@ class Sampler:
         self.options.total_time_available = options['total_time_available']
         self.options.area_loss_weighting = options['area_loss_weighting']
         self.options.maximise_samples_weighting = options['maximise_samples_weighting']
-        self.options.priority_sample_weighting = options['priority_sample_weighting']
         self.options.max_samples = options['max_samples']
         self.options.max_boxes = options['max_boxes']
         self.options.max_plates = options['max_plates']
@@ -61,6 +63,7 @@ class Sampler:
 
         self.v.sample_is_picked = {} # indexed by row index
         self.v.priority_sample_is_picked = {} # indexed by row index
+        self.v.priority_weight = {} # indexed by row index
         self.v.box_is_picked = {} # indexed by box name
         self.v.plate_is_picked = {} # indexed by box name
 
@@ -77,12 +80,11 @@ class Sampler:
             self.model.Add(self.v.box_is_picked[row.box] >= self.v.sample_is_picked[i])
             self.model.Add(self.v.plate_is_picked[row.plate] >= self.v.sample_is_picked[i])
             self.v.sample_is_picked_by_area[row.area].append(self.v.sample_is_picked[i])
+            self.v.priority_weight[i] = row.priority_weight
 
             # Below we assert that if a single sample on a plate is picked then all samples are picked.
             self.model.Add(  self.v.sample_is_picked[i] >= self.v.plate_is_picked[row.plate])
 
-            if row.priority:
-                self.v.priority_sample_is_picked[i] = self.v.sample_is_picked[i]
 
         self.instantiate_summary_variables()
         self.instantiate_geographical_variables()
@@ -92,6 +94,7 @@ class Sampler:
         self.v.total_boxes_picked = sum(self.v.box_is_picked.values())
         self.v.total_plates_picked = sum(self.v.plate_is_picked.values())
         self.v.total_samples_picked = sum(self.v.sample_is_picked.values())
+        self.v.total_priority_weights = sum([v * self.v.priority_weight[k] for k,v in self.v.sample_is_picked.items()])
         self.v.total_priority_samples_picked = sum(self.v.priority_sample_is_picked.values())
         self.v.total_time = self.v.total_boxes_picked* self.options.seconds_per_box_load + self.v.total_samples_picked*self.options.seconds_per_cherrypick
 
@@ -149,7 +152,7 @@ class Sampler:
     def get_loss(self):
         loss = self.get_area_loss() * self.options.area_loss_weighting
         loss = loss - self.v.total_samples_picked*self.options.maximise_samples_weighting
-        loss = loss - self.v.total_priority_samples_picked*self.options.priority_sample_weighting
+        loss = loss - self.v.total_priority_weights
         return loss
 
     def get_results(self, input_candidates):
@@ -163,7 +166,9 @@ class Sampler:
         for area in self.v.desired_numbers_for_eod_by_area.keys():
             desired = self.solver.Value(self.v.desired_numbers_for_eod_by_area[area])
             projected = self.solver.Value(self.v.projected_numbers_for_eod_by_area[area])
-            eprint(f"{area}: desired: {desired}  projected: {projected} diff:{projected-desired}")
+            picked = self.solver.Value(self.v.total_by_area[area]) if area in self.v.total_by_area else 0
+
+            eprint(f"{area}: desired: {desired}  projected: {projected} diff:{projected-desired} picked:{picked}")
         eprint(f"Total projected for this 7 days: {self.solver.Value(sum(self.v.projected_numbers_for_eod_by_area.values()))}")
         eprint(f"Total desired for this 7 days: {self.solver.Value(sum(self.v.desired_numbers_for_eod_by_area.values()))}")
 
