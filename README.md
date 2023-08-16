@@ -6,7 +6,7 @@ A major goal of Evensampling is to ensure that genomes sampled in an area per we
 
 The algorithm also considers a priority weight associated with each sample, allowing prioritised picking of sequences from travellers or other prioritised groups. The algorithm is implemented using OR-tools, minimising a composite loss function to balance various competing requirements and preferences.
 
-
+## Installation
 
 
 ```bash
